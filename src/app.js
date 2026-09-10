@@ -43,28 +43,6 @@ function isAllowedOrigin(origin) {
   );
 }
 
-function applyCorsHeaders(req, res) {
-  const origin = req.headers.origin;
-
-  if (origin && isAllowedOrigin(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Vary', 'Origin');
-  }
-
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS'
-  );
-
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Authorization, Content-Type, X-Requested-With, Accept, Origin'
-  );
-
-  res.setHeader('Access-Control-Max-Age', '86400');
-}
-
 const corsOptions = {
   origin(origin, callback) {
     if (!origin || isAllowedOrigin(origin)) {
@@ -87,8 +65,8 @@ const corsOptions = {
   ],
 
   allowedHeaders: [
-    'Authorization',
     'Content-Type',
+    'Authorization',
     'X-Requested-With',
     'Accept',
     'Origin',
@@ -103,9 +81,6 @@ const corsOptions = {
 
 // CORS middleware
 app.use(cors(corsOptions));
-
-// Handle preflight requests
-app.options(/.*/, cors(corsOptions));
 
 // =======================
 // Body Parser
@@ -154,15 +129,6 @@ app.use((req, res) => {
 // Error Handler
 // =======================
 
-app.use((err, req, res, next) => {
-  applyCorsHeaders(req, res);
-
-  return require('./middleware/error.middleware')(
-    err,
-    req,
-    res,
-    next
-  );
-});
+app.use(require('./middleware/error.middleware'));
 
 module.exports = app;
