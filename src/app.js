@@ -33,14 +33,7 @@ function isAllowedOrigin(origin) {
     .trim()
     .replace(/\/$/, '');
 
-  if (allowedOrigins.includes(normalized)) {
-    return true;
-  }
-
-  // Allow Vercel frontend production and preview deployments
-  return /^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app$/i.test(
-    normalized
-  );
+  return allowedOrigins.includes(normalized);
 }
 
 const corsOptions = {
