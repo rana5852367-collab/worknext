@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 
 const path = require('path');
 const express = require('express');
@@ -11,72 +11,94 @@ const app = express();
 // =======================
 
 const DEFAULT_ORIGINS = [
-'http://localhost:3000',
-'http://127.0.0.1:3000',
-'http://localhost:5173',
-'http://127.0.0.1:5173',
-'https://worknest-softcenterci.vercel.app',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://worknest-softcenterci.vercel.app',
 ];
 
 const allowedOrigins = [
-...DEFAULT_ORIGINS,
-...String(process.env.CLIENT_URL || '')
-.split(',')
-.map(origin => origin.trim().replace(//$/, ''))
-.filter(Boolean),
+  ...DEFAULT_ORIGINS,
+  ...String(process.env.CLIENT_URL || '')
+    .split(',')
+    .map(origin => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean),
 ];
 
 function isAllowedOrigin(origin) {
-const normalized = String(origin)
-.trim()
-.replace(//$/, '');
+  if (!origin) return false;
 
-if (allowedOrigins.includes(normalized)) {
-return true;
+  const normalized = String(origin)
+    .trim()
+    .replace(/\/$/, '');
+
+  if (allowedOrigins.includes(normalized)) {
+    return true;
+  }
+
+  // Allow Vercel frontend production and preview deployments
+  return /^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app$/i.test(
+    normalized
+  );
 }
 
-// Allow Vercel frontend production and preview deployments
-return /^https://[a-z0-9-]+(?:.[a-z0-9-]+)*.vercel.app$/i.test(
-normalized
-);
+function applyCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+
+  if (origin && isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Vary', 'Origin');
+  }
+
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS'
+  );
+
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Authorization, Content-Type, X-Requested-With, Accept, Origin'
+  );
+
+  res.setHeader('Access-Control-Max-Age', '86400');
 }
 
 const corsOptions = {
-origin(origin, callback) {
-// Allow requests without an Origin header
-if (!origin || isAllowedOrigin(origin)) {
-return callback(null, true);
-}
+  origin(origin, callback) {
+    if (!origin || isAllowedOrigin(origin)) {
+      return callback(null, true);
+    }
 
-```
-return callback(null, false);
-```
+    return callback(null, false);
+  },
 
-},
+  credentials: true,
 
-credentials: true,
+  methods: [
+    'GET',
+    'HEAD',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+  ],
 
-methods: [
-'GET',
-'POST',
-'PUT',
-'PATCH',
-'DELETE',
-'OPTIONS',
-],
+  allowedHeaders: [
+    'Authorization',
+    'Content-Type',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+  ],
 
-allowedHeaders: [
-'Content-Type',
-'Authorization',
-'X-Requested-With',
-'Accept',
-],
+  exposedHeaders: ['Content-Disposition'],
 
-exposedHeaders: ['Content-Disposition'],
+  optionsSuccessStatus: 204,
 
-optionsSuccessStatus: 204,
-
-maxAge: 86400,
+  maxAge: 86400,
 };
 
 // CORS middleware
@@ -96,8 +118,8 @@ app.use(express.json());
 // =======================
 
 app.use(
-'/uploads',
-express.static(path.join(process.cwd(), 'uploads'))
+  '/uploads',
+  express.static(path.join(process.cwd(), 'uploads'))
 );
 
 // =======================
@@ -111,10 +133,10 @@ app.use('/api', require('./routes'));
 // =======================
 
 app.get('/', (req, res) => {
-res.json({
-success: true,
-message: 'Auth API is running',
-});
+  res.json({
+    success: true,
+    message: 'Auth API is running',
+  });
 });
 
 // =======================
@@ -122,16 +144,25 @@ message: 'Auth API is running',
 // =======================
 
 app.use((req, res) => {
-res.status(404).json({
-success: false,
-message: 'Route not found',
-});
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+  });
 });
 
 // =======================
 // Error Handler
 // =======================
 
-app.use(require('./middleware/error.middleware'));
+app.use((err, req, res, next) => {
+  applyCorsHeaders(req, res);
+
+  return require('./middleware/error.middleware')(
+    err,
+    req,
+    res,
+    next
+  );
+});
 
 module.exports = app;
